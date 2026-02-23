@@ -1,8 +1,9 @@
 import math
 
+import pandas as pd
 import pytest
 
-from core.io import to_float_it
+from core.io import _detect_header_row, to_float_it
 
 
 @pytest.mark.parametrize(
@@ -22,3 +23,16 @@ def test_to_float_it(value, expected):
         assert math.isnan(result)
     else:
         assert result == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("qty_header", ["Q.TA", "Q.TA’"])
+def test_detect_header_row_accepts_qty_variants(qty_header):
+    raw_df = pd.DataFrame(
+        [
+            ["report vendite", None, None],
+            ["Categoria Cliente", "Marca / Articolo", qty_header],
+            ["Farmacia", "Brand / Item", 10],
+        ]
+    )
+
+    assert _detect_header_row(raw_df) == 1

@@ -17,6 +17,25 @@ REQUIRED_COLUMNS = [
     "prezzo vendita",
 ]
 
+HEADER_ALIASES = {
+    "categoria cliente": "categoria cliente",
+    "cat cliente": "categoria cliente",
+    "categoria": "categoria cliente",
+    "marca / articolo": "MARCA / ARTICOLO",
+    "marca/articolo": "MARCA / ARTICOLO",
+    "articolo": "MARCA / ARTICOLO",
+    "quantità": "quantità",
+    "q.ta'": "quantità",
+    "q.ta": "quantità",
+    "qta": "quantità",
+    "ultimo prezzo acquisto": "ultimo prezzo acquisto",
+    "u.p.a.": "ultimo prezzo acquisto",
+    "prezzo vendita": "prezzo vendita",
+    "p.v.": "prezzo vendita",
+}
+
+HEADER_ALIASES_CF = {k.casefold(): v for k, v in HEADER_ALIASES.items()}
+
 
 class MissingColumnsError(ValueError):
     """Raised when required columns are missing from input data."""
@@ -72,6 +91,34 @@ def _normalize_column_name(name: Any) -> str:
     return re.sub(r"\s{2,}", " ", name_str)
 
 
+def _normalize_for_match(value: Any) -> str:
+    text = _normalize_column_name(value).replace("’", "'")
+    return text.casefold()
+
+
+def _detect_header_row(raw_df: pd.DataFrame, scan_limit: int = 10) -> int:
+    max_rows = min(scan_limit, len(raw_df.index))
+    for idx in range(max_rows):
+        row_values = {
+            _normalize_for_match(value)
+            for value in raw_df.iloc[idx].tolist()
+            if not pd.isna(value) and str(value).strip()
+        }
+
+        has_customer = any(
+            key in row_values for key in ("categoria cliente", "cat cliente", "categoria")
+        )
+        has_brand_item = any(
+            key in row_values for key in ("marca / articolo", "marca/articolo", "articolo")
+        )
+        has_qty = any(key in row_values for key in {"q.ta'", "q.ta", "qta", "quantità"})
+
+        if has_customer and has_brand_item and has_qty:
+            return idx
+
+    return 0
+
+
 def load_sales_excel(file: Any) -> pd.DataFrame:
     """Load and clean sales Excel data uploaded from Streamlit."""
     file_name = getattr(file, "name", str(file))
@@ -80,9 +127,14 @@ def load_sales_excel(file: Any) -> pd.DataFrame:
             "Formato file non supportato: esporta il file vendite come .xlsx e riprova."
         )
 
-    df = pd.read_excel(file)
+    raw_df = pd.read_excel(file, header=None)
+    header_row = _detect_header_row(raw_df)
+    df = pd.read_excel(file, header=header_row)
 
     df.columns = [_normalize_column_name(col) for col in df.columns]
+    df = df.rename(
+        columns=lambda col: HEADER_ALIASES_CF.get(col.casefold(), col)
+    )
 
     missing = [col for col in REQUIRED_COLUMNS if col not in df.columns]
     if missing:
