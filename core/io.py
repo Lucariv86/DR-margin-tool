@@ -26,11 +26,14 @@ HEADER_ALIASES = {
     "articolo": "MARCA / ARTICOLO",
     "quantità": "quantità",
     "q.ta'": "quantità",
+    "q.ta’": "quantità",
     "q.ta": "quantità",
     "qta": "quantità",
     "ultimo prezzo acquisto": "ultimo prezzo acquisto",
     "u.p.a.": "ultimo prezzo acquisto",
+    "prz. ult.acq": "ultimo prezzo acquisto",
     "prezzo vendita": "prezzo vendita",
+    "prezzo sc": "prezzo vendita",
     "p.v.": "prezzo vendita",
 }
 

@@ -3,7 +3,7 @@ import math
 import pandas as pd
 import pytest
 
-from core.io import _detect_header_row, to_float_it
+from core.io import HEADER_ALIASES_CF, _detect_header_row, to_float_it
 
 
 @pytest.mark.parametrize(
@@ -36,3 +36,15 @@ def test_detect_header_row_accepts_qty_variants(qty_header):
     )
 
     assert _detect_header_row(raw_df) == 1
+
+
+@pytest.mark.parametrize(
+    "header, expected",
+    [
+        ("Q.TA’", "quantità"),
+        ("prz. ult.acq", "ultimo prezzo acquisto"),
+        ("Prezzo Sc", "prezzo vendita"),
+    ],
+)
+def test_header_aliases_include_recent_variants(header, expected):
+    assert HEADER_ALIASES_CF[header.casefold()] == expected
