@@ -64,3 +64,51 @@ def segment_kpis(df: pd.DataFrame) -> pd.DataFrame:
         }
 
     return pd.DataFrame.from_dict(rows, orient="index")
+
+
+def brand_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate revenue and margin metrics by brand."""
+    grouped = (
+        df.groupby("marca", dropna=False, as_index=False)
+        .agg(
+            fatturato=("fatturato_riga", "sum"),
+            margine_euro=("margine_euro", "sum"),
+        )
+    )
+
+    grouped["margine_pct"] = np.where(
+        grouped["fatturato"] == 0,
+        np.nan,
+        grouped["margine_euro"] / grouped["fatturato"],
+    )
+    return grouped
+
+
+def add_opportunity(df_brand: pd.DataFrame, target_pct: float) -> pd.DataFrame:
+    """Add target and improvable euro margin based on target margin percent."""
+    result = df_brand.copy()
+    result["target_pct"] = target_pct
+
+    opportunity = (target_pct - result["margine_pct"]) * result["fatturato"]
+    result["migliorabile_euro"] = opportunity.clip(lower=0)
+    return result
+
+
+def flotte_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.DataFrame:
+    """Compute brand opportunities for fleet clients (categoria cliente == 46)."""
+    categoria = pd.to_numeric(df["categoria cliente"], errors="coerce")
+    flotte_df = df.loc[categoria == 46]
+
+    summary = brand_summary(flotte_df)
+    with_opportunity = add_opportunity(summary, target_pct)
+    return with_opportunity.sort_values("migliorabile_euro", ascending=False)
+
+
+def clienti_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.DataFrame:
+    """Compute brand opportunities for non-fleet clients (categoria cliente != 46)."""
+    categoria = pd.to_numeric(df["categoria cliente"], errors="coerce")
+    clienti_df = df.loc[categoria != 46]
+
+    summary = brand_summary(clienti_df)
+    with_opportunity = add_opportunity(summary, target_pct)
+    return with_opportunity.sort_values("migliorabile_euro", ascending=False)

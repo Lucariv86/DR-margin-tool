@@ -1,7 +1,13 @@
-import pytest
 import pandas as pd
+import pytest
 
-from core.metrics import add_margin_columns, segment_kpis
+from core.metrics import (
+    add_margin_columns,
+    add_opportunity,
+    clienti_brand_opportunities,
+    flotte_brand_opportunities,
+    segment_kpis,
+)
 
 
 def test_add_margin_columns_computes_margine_pct_known_case():
@@ -44,3 +50,40 @@ def test_segment_kpis_handles_flotte_non_flotte_and_totale():
     assert result.loc["totale", "fatturato_totale"] == pytest.approx(180.0)
     assert result.loc["totale", "margine_totale"] == pytest.approx(30.0)
     assert result.loc["totale", "margine_medio_pct"] == pytest.approx(30.0 / 180.0)
+
+
+def test_add_opportunity_computes_migliorabile_euro():
+    df_brand = pd.DataFrame(
+        {
+            "marca": ["A", "B"],
+            "fatturato": [100.0, 200.0],
+            "margine_euro": [30.0, 120.0],
+            "margine_pct": [0.30, 0.60],
+        }
+    )
+
+    result = add_opportunity(df_brand, target_pct=0.50)
+
+    assert result.loc[0, "target_pct"] == pytest.approx(0.50)
+    assert result.loc[1, "target_pct"] == pytest.approx(0.50)
+    assert result.loc[0, "migliorabile_euro"] == pytest.approx(20.0)
+    assert result.loc[1, "migliorabile_euro"] == pytest.approx(0.0)
+
+
+def test_brand_opportunities_filter_segments_correctly():
+    df = pd.DataFrame(
+        {
+            "categoria cliente": [46, 46, 10, 10],
+            "marca": ["Fleet", "Fleet2", "Client", "Client2"],
+            "fatturato_riga": [100.0, 150.0, 200.0, 50.0],
+            "margine_euro": [20.0, 60.0, 40.0, 10.0],
+        }
+    )
+
+    flotte_result = flotte_brand_opportunities(df, target_pct=0.50)
+    clienti_result = clienti_brand_opportunities(df, target_pct=0.45)
+
+    assert set(flotte_result["marca"]) == {"Fleet", "Fleet2"}
+    assert set(clienti_result["marca"]) == {"Client", "Client2"}
+    assert "Client" not in set(flotte_result["marca"])
+    assert "Fleet" not in set(clienti_result["marca"])

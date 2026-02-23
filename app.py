@@ -3,11 +3,32 @@
 import streamlit as st
 
 from core.io import MissingColumnsError, load_sales_excel
-from core.metrics import add_margin_columns, segment_kpis
+from core.metrics import (
+    add_margin_columns,
+    clienti_brand_opportunities,
+    flotte_brand_opportunities,
+    segment_kpis,
+)
 
 
 st.set_page_config(page_title="DR Margin Tool", layout="wide")
 st.title("DR Margin Tool")
+
+target_flotte_pct = st.sidebar.number_input(
+    "Target margine % Flotte",
+    min_value=0.0,
+    max_value=100.0,
+    value=50.0,
+    step=1.0,
+) / 100
+
+target_clienti_pct = st.sidebar.number_input(
+    "Target margine % Clienti",
+    min_value=0.0,
+    max_value=100.0,
+    value=45.0,
+    step=1.0,
+) / 100
 
 uploaded_file = st.file_uploader(
     "Carica file Excel vendite (.xlsx)",
@@ -39,6 +60,39 @@ if uploaded_file is not None:
                 margin_pct = values["margine_medio_pct"]
                 margin_pct_text = "n/d" if margin_pct != margin_pct else f"{margin_pct:.2%}"
                 st.metric("Margine %", margin_pct_text)
+
+        st.subheader("Margine migliorabile € per marca")
+        flotte_tab, clienti_tab = st.tabs(["Flotte", "Clienti"])
+
+        with flotte_tab:
+            flotte_brand_df = flotte_brand_opportunities(data, target_flotte_pct)
+            st.dataframe(
+                flotte_brand_df.style.format(
+                    {
+                        "fatturato": "€ {:,.2f}",
+                        "margine_euro": "€ {:,.2f}",
+                        "margine_pct": "{:.2%}",
+                        "target_pct": "{:.2%}",
+                        "migliorabile_euro": "€ {:,.2f}",
+                    }
+                ),
+                use_container_width=True,
+            )
+
+        with clienti_tab:
+            clienti_brand_df = clienti_brand_opportunities(data, target_clienti_pct)
+            st.dataframe(
+                clienti_brand_df.style.format(
+                    {
+                        "fatturato": "€ {:,.2f}",
+                        "margine_euro": "€ {:,.2f}",
+                        "margine_pct": "{:.2%}",
+                        "target_pct": "{:.2%}",
+                        "migliorabile_euro": "€ {:,.2f}",
+                    }
+                ),
+                use_container_width=True,
+            )
 
         st.subheader("Anteprima dati (prime 20 righe)")
         preview_columns = [
