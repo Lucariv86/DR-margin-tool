@@ -74,6 +74,12 @@ def _normalize_column_name(name: Any) -> str:
 
 def load_sales_excel(file: Any) -> pd.DataFrame:
     """Load and clean sales Excel data uploaded from Streamlit."""
+    file_name = getattr(file, "name", str(file))
+    if not str(file_name).lower().endswith(".xlsx"):
+        raise ValueError(
+            "Formato file non supportato: esporta il file vendite come .xlsx e riprova."
+        )
+
     df = pd.read_excel(file)
 
     df.columns = [_normalize_column_name(col) for col in df.columns]
