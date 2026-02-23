@@ -19,8 +19,11 @@ REQUIRED_COLUMNS = [
 
 HEADER_ALIASES = {
     "categoria cliente": "categoria cliente",
+    "ct": "categoria cliente",
     "cat cliente": "categoria cliente",
     "categoria": "categoria cliente",
+    "cfr": "codice cliente",
+    "cs": "sottocategoria cliente",
     "marca / articolo": "MARCA / ARTICOLO",
     "marca/articolo": "MARCA / ARTICOLO",
     "articolo": "MARCA / ARTICOLO",
@@ -32,8 +35,11 @@ HEADER_ALIASES = {
     "ultimo prezzo acquisto": "ultimo prezzo acquisto",
     "u.p.a.": "ultimo prezzo acquisto",
     "prz. ult.acq": "ultimo prezzo acquisto",
+    "prz. ult.acq.": "ultimo prezzo acquisto",
+    "%ric.": "ricarico",
     "prezzo vendita": "prezzo vendita",
     "prezzo sc": "prezzo vendita",
+    "prezzo sc.": "prezzo vendita",
     "p.v.": "prezzo vendita",
 }
 

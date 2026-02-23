@@ -41,9 +41,15 @@ def test_detect_header_row_accepts_qty_variants(qty_header):
 @pytest.mark.parametrize(
     "header, expected",
     [
+        ("ct", "categoria cliente"),
+        ("cfr", "codice cliente"),
+        ("cs", "sottocategoria cliente"),
         ("Q.TA’", "quantità"),
+        ("%ric.", "ricarico"),
         ("prz. ult.acq", "ultimo prezzo acquisto"),
+        ("prz. ult.acq.", "ultimo prezzo acquisto"),
         ("Prezzo Sc", "prezzo vendita"),
+        ("prezzo sc.", "prezzo vendita"),
     ],
 )
 def test_header_aliases_include_recent_variants(header, expected):
