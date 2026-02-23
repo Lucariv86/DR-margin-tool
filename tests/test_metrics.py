@@ -6,8 +6,17 @@ from core.metrics import (
     add_opportunity,
     clienti_brand_opportunities,
     flotte_brand_opportunities,
+    non_flotte_brand_opportunities,
     segment_kpis,
 )
+
+
+def test_brand_opportunity_functions_are_importable_from_core_metrics():
+    from core.metrics import clienti_brand_opportunities as clienti_imported
+    from core.metrics import flotte_brand_opportunities as flotte_imported
+
+    assert flotte_imported is flotte_brand_opportunities
+    assert clienti_imported is clienti_brand_opportunities
 
 
 def test_add_margin_columns_computes_margine_pct_known_case():
@@ -87,3 +96,19 @@ def test_brand_opportunities_filter_segments_correctly():
     assert set(clienti_result["marca"]) == {"Client", "Client2"}
     assert "Client" not in set(flotte_result["marca"])
     assert "Fleet" not in set(clienti_result["marca"])
+
+
+def test_clienti_brand_opportunities_is_wrapper_for_non_flotte():
+    df = pd.DataFrame(
+        {
+            "categoria cliente": [46, 10],
+            "marca": ["Fleet", "Client"],
+            "fatturato_riga": [100.0, 200.0],
+            "margine_euro": [20.0, 40.0],
+        }
+    )
+
+    wrapper_result = clienti_brand_opportunities(df, target_pct=0.45)
+    canonical_result = non_flotte_brand_opportunities(df, target_pct=0.45)
+
+    pd.testing.assert_frame_equal(wrapper_result, canonical_result)

@@ -6,6 +6,18 @@ import numpy as np
 import pandas as pd
 
 
+__all__ = [
+    "REQUIRED_METRIC_COLUMNS",
+    "add_margin_columns",
+    "segment_kpis",
+    "brand_summary",
+    "add_opportunity",
+    "flotte_brand_opportunities",
+    "non_flotte_brand_opportunities",
+    "clienti_brand_opportunities",
+]
+
+
 REQUIRED_METRIC_COLUMNS = [
     "prezzo vendita",
     "ultimo prezzo acquisto",
@@ -104,7 +116,7 @@ def flotte_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.DataFr
     return with_opportunity.sort_values("migliorabile_euro", ascending=False)
 
 
-def clienti_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.DataFrame:
+def non_flotte_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.DataFrame:
     """Compute brand opportunities for non-fleet clients (categoria cliente != 46)."""
     categoria = pd.to_numeric(df["categoria cliente"], errors="coerce")
     clienti_df = df.loc[categoria != 46]
@@ -112,3 +124,8 @@ def clienti_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.DataF
     summary = brand_summary(clienti_df)
     with_opportunity = add_opportunity(summary, target_pct)
     return with_opportunity.sort_values("migliorabile_euro", ascending=False)
+
+
+def clienti_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.DataFrame:
+    """Backward-compatible name used by app.py for non-fleet opportunities."""
+    return non_flotte_brand_opportunities(df, target_pct)
