@@ -7,6 +7,8 @@ from core.metrics import (
     add_margin_columns,
     clienti_brand_opportunities,
     flotte_brand_opportunities,
+    low_margin_articles,
+    segment_article_drilldown,
     segment_kpis,
 )
 
@@ -62,7 +64,7 @@ if uploaded_file is not None:
                 st.metric("Margine %", margin_pct_text)
 
         st.subheader("Margine migliorabile € per marca")
-        flotte_tab, clienti_tab = st.tabs(["Flotte", "Clienti"])
+        flotte_tab, clienti_tab, sotto_soglia_tab = st.tabs(["Flotte", "Clienti", "Sotto soglia"])
 
         with flotte_tab:
             flotte_brand_df = flotte_brand_opportunities(data, target_flotte_pct)
@@ -79,6 +81,31 @@ if uploaded_file is not None:
                 use_container_width=True,
             )
 
+            flotte_brands = flotte_brand_df["marca"].dropna().unique().tolist()
+            if flotte_brands:
+                selected_flotte_brand = st.selectbox("Marca (Flotte)", flotte_brands)
+                flotte_drilldown_df = segment_article_drilldown(
+                    data,
+                    segment="flotte",
+                    selected_brand=selected_flotte_brand,
+                    target_pct=target_flotte_pct,
+                )
+                st.dataframe(
+                    flotte_drilldown_df.style.format(
+                        {
+                            "quantità": "{:,.2f}",
+                            "fatturato": "€ {:,.2f}",
+                            "margine_euro": "€ {:,.2f}",
+                            "margine_pct": "{:.2%}",
+                            "prezzo_vendita_medio": "€ {:,.2f}",
+                            "costo_medio": "€ {:,.2f}",
+                            "target_pct": "{:.2%}",
+                            "migliorabile_euro": "€ {:,.2f}",
+                        }
+                    ),
+                    use_container_width=True,
+                )
+
         with clienti_tab:
             clienti_brand_df = clienti_brand_opportunities(data, target_clienti_pct)
             st.dataframe(
@@ -89,6 +116,59 @@ if uploaded_file is not None:
                         "margine_pct": "{:.2%}",
                         "target_pct": "{:.2%}",
                         "migliorabile_euro": "€ {:,.2f}",
+                    }
+                ),
+                use_container_width=True,
+            )
+
+            clienti_brands = clienti_brand_df["marca"].dropna().unique().tolist()
+            if clienti_brands:
+                selected_clienti_brand = st.selectbox("Marca (Clienti)", clienti_brands)
+                clienti_drilldown_df = segment_article_drilldown(
+                    data,
+                    segment="clienti",
+                    selected_brand=selected_clienti_brand,
+                    target_pct=target_clienti_pct,
+                )
+                st.dataframe(
+                    clienti_drilldown_df.style.format(
+                        {
+                            "quantità": "{:,.2f}",
+                            "fatturato": "€ {:,.2f}",
+                            "margine_euro": "€ {:,.2f}",
+                            "margine_pct": "{:.2%}",
+                            "prezzo_vendita_medio": "€ {:,.2f}",
+                            "costo_medio": "€ {:,.2f}",
+                            "target_pct": "{:.2%}",
+                            "migliorabile_euro": "€ {:,.2f}",
+                        }
+                    ),
+                    use_container_width=True,
+                )
+
+        with sotto_soglia_tab:
+            segment_choice = st.selectbox("Segmento", ["tutti", "flotte", "clienti"])
+            threshold_pct = (
+                st.number_input("Soglia margine %", min_value=0.0, max_value=100.0, value=10.0, step=1.0)
+                / 100
+            )
+            min_fatturato = st.number_input("Fatturato minimo", min_value=0.0, value=0.0, step=100.0)
+
+            low_margin_df = low_margin_articles(
+                data,
+                segment=segment_choice,
+                threshold_pct=threshold_pct,
+                min_fatturato=min_fatturato,
+            )
+            st.dataframe(
+                low_margin_df.style.format(
+                    {
+                        "quantità": "{:,.2f}",
+                        "fatturato": "€ {:,.2f}",
+                        "margine_euro": "€ {:,.2f}",
+                        "margine_pct": "{:.2%}",
+                        "prezzo_vendita_medio": "€ {:,.2f}",
+                        "costo_medio": "€ {:,.2f}",
                     }
                 ),
                 use_container_width=True,

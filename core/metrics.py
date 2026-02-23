@@ -15,6 +15,9 @@ __all__ = [
     "flotte_brand_opportunities",
     "non_flotte_brand_opportunities",
     "clienti_brand_opportunities",
+    "article_summary",
+    "segment_article_drilldown",
+    "low_margin_articles",
 ]
 
 
@@ -42,6 +45,7 @@ def add_margin_columns(df: pd.DataFrame) -> pd.DataFrame:
     quantity = pd.to_numeric(result["quantità"], errors="coerce")
 
     result["fatturato_riga"] = sale_price * quantity
+    result["costo_riga"] = purchase_price * quantity
     result["margine_euro"] = (sale_price - purchase_price) * quantity
 
     denominator = sale_price.where((sale_price != 0) & sale_price.notna())
@@ -129,3 +133,84 @@ def non_flotte_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.Da
 def clienti_brand_opportunities(df: pd.DataFrame, target_pct: float) -> pd.DataFrame:
     """Backward-compatible name used by app.py for non-fleet opportunities."""
     return non_flotte_brand_opportunities(df, target_pct)
+
+
+def article_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate revenue, margin, and average price metrics by brand/article."""
+    grouped = (
+        df.groupby(["marca", "articolo"], dropna=False, as_index=False)
+        .agg(
+            quantità=("quantità", "sum"),
+            fatturato=("fatturato_riga", "sum"),
+            margine_euro=("margine_euro", "sum"),
+            costo_totale=("costo_riga", "sum"),
+        )
+    )
+
+    grouped["margine_pct"] = np.where(
+        grouped["fatturato"] == 0,
+        np.nan,
+        grouped["margine_euro"] / grouped["fatturato"],
+    )
+    grouped["prezzo_vendita_medio"] = np.where(
+        grouped["quantità"] == 0,
+        np.nan,
+        grouped["fatturato"] / grouped["quantità"],
+    )
+    grouped["costo_medio"] = np.where(
+        grouped["quantità"] == 0,
+        np.nan,
+        grouped["costo_totale"] / grouped["quantità"],
+    )
+    return grouped.drop(columns=["costo_totale"])
+
+
+def _segment_filter(df: pd.DataFrame, segment: str) -> pd.DataFrame:
+    """Return dataframe filtered by segment definition on categoria cliente."""
+    categoria = pd.to_numeric(df["categoria cliente"], errors="coerce")
+    if segment == "flotte":
+        return df.loc[categoria == 46]
+    if segment == "clienti":
+        return df.loc[categoria != 46]
+    if segment == "tutti":
+        return df
+    raise ValueError("segment must be one of: tutti, flotte, clienti")
+
+
+def segment_article_drilldown(
+    df: pd.DataFrame,
+    segment: str,
+    selected_brand: str,
+    target_pct: float,
+) -> pd.DataFrame:
+    """Return article-level drilldown for a selected brand and segment."""
+    segment_df = _segment_filter(df, segment)
+    drilldown_df = segment_df.loc[segment_df["marca"] == selected_brand]
+
+    summary = article_summary(drilldown_df)
+    summary["target_pct"] = target_pct
+    opportunity = (target_pct - summary["margine_pct"]) * summary["fatturato"]
+    summary["migliorabile_euro"] = opportunity.clip(lower=0)
+
+    return summary.sort_values(
+        by=["margine_pct", "fatturato"],
+        ascending=[True, False],
+    )
+
+
+def low_margin_articles(
+    df: pd.DataFrame,
+    segment: str,
+    threshold_pct: float,
+    min_fatturato: float = 0,
+) -> pd.DataFrame:
+    """Return article-level rows below a given margin threshold."""
+    segment_df = _segment_filter(df, segment)
+    summary = article_summary(segment_df)
+    below_threshold = summary.loc[summary["margine_pct"] < threshold_pct]
+    filtered = below_threshold.loc[below_threshold["fatturato"] >= min_fatturato]
+
+    return filtered.sort_values(
+        by=["margine_pct", "fatturato"],
+        ascending=[True, False],
+    )

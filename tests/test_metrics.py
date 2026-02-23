@@ -6,7 +6,9 @@ from core.metrics import (
     add_opportunity,
     clienti_brand_opportunities,
     flotte_brand_opportunities,
+    low_margin_articles,
     non_flotte_brand_opportunities,
+    segment_article_drilldown,
     segment_kpis,
 )
 
@@ -112,3 +114,47 @@ def test_clienti_brand_opportunities_is_wrapper_for_non_flotte():
     canonical_result = non_flotte_brand_opportunities(df, target_pct=0.45)
 
     pd.testing.assert_frame_equal(wrapper_result, canonical_result)
+
+
+def test_low_margin_articles_returns_only_rows_below_threshold():
+    df = pd.DataFrame(
+        {
+            "categoria cliente": [46, 46, 10],
+            "marca": ["A", "A", "B"],
+            "articolo": ["x", "y", "z"],
+            "quantità": [10.0, 5.0, 10.0],
+            "fatturato_riga": [100.0, 100.0, 100.0],
+            "margine_euro": [5.0, 20.0, 8.0],
+            "costo_riga": [95.0, 80.0, 92.0],
+        }
+    )
+
+    result = low_margin_articles(df, segment="tutti", threshold_pct=0.10)
+
+    assert set(result["articolo"]) == {"x", "z"}
+    assert (result["margine_pct"] < 0.10).all()
+
+
+def test_segment_article_drilldown_filters_selected_brand_and_sorts_by_margin_pct():
+    df = pd.DataFrame(
+        {
+            "categoria cliente": [46, 46, 46, 10],
+            "marca": ["A", "A", "A", "B"],
+            "articolo": ["high", "low", "mid", "other"],
+            "quantità": [10.0, 10.0, 10.0, 10.0],
+            "fatturato_riga": [100.0, 100.0, 100.0, 100.0],
+            "margine_euro": [30.0, 5.0, 20.0, 1.0],
+            "costo_riga": [70.0, 95.0, 80.0, 99.0],
+        }
+    )
+
+    result = segment_article_drilldown(
+        df,
+        segment="flotte",
+        selected_brand="A",
+        target_pct=0.25,
+    )
+
+    assert set(result["marca"]) == {"A"}
+    assert list(result["articolo"]) == ["low", "mid", "high"]
+    assert result["margine_pct"].is_monotonic_increasing
