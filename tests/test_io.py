@@ -116,9 +116,15 @@ def test_load_sales_excel_accepts_abbreviated_headers():
 @pytest.mark.parametrize(
     "header, expected",
     [
+        ("ct", "categoria cliente"),
+        ("cfr", "codice cliente"),
+        ("cs", "sottocategoria cliente"),
         ("Q.TA’", "quantità"),
+        ("%ric.", "ricarico"),
         ("prz. ult.acq", "ultimo prezzo acquisto"),
+        ("prz. ult.acq.", "ultimo prezzo acquisto"),
         ("Prezzo Sc", "prezzo vendita"),
+        ("prezzo sc.", "prezzo vendita"),
     ],
 )
 def test_header_aliases_include_recent_variants(header, expected):
