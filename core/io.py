@@ -24,23 +24,28 @@ HEADER_ALIASES = {
     "categoria": "categoria cliente",
     "cfr": "codice cliente",
     "cs": "sottocategoria cliente",
+
     "marca / articolo": "MARCA / ARTICOLO",
     "marca/articolo": "MARCA / ARTICOLO",
     "articolo": "MARCA / ARTICOLO",
+
     "quantità": "quantità",
     "q.ta'": "quantità",
     "q.ta’": "quantità",
     "q.ta": "quantità",
     "qta": "quantità",
+
     "ultimo prezzo acquisto": "ultimo prezzo acquisto",
     "u.p.a.": "ultimo prezzo acquisto",
-    "prz. ult.acq": "ultimo prezzo acquisto",
     "prz. ult.acq.": "ultimo prezzo acquisto",
-    "%ric.": "ricarico",
+    "prz. ult.acq": "ultimo prezzo acquisto",
+
     "prezzo vendita": "prezzo vendita",
-    "prezzo sc": "prezzo vendita",
     "prezzo sc.": "prezzo vendita",
+    "prezzo sc": "prezzo vendita",
     "p.v.": "prezzo vendita",
+
+    "%ric.": "ricarico",
 }
 
 HEADER_ALIASES_CF = {k.casefold(): v for k, v in HEADER_ALIASES.items()}
@@ -115,7 +120,8 @@ def _detect_header_row(raw_df: pd.DataFrame, scan_limit: int = 10) -> int:
         }
 
         has_customer = any(
-            key in row_values for key in ("categoria cliente", "cat cliente", "categoria")
+            key in row_values
+            for key in ("categoria cliente", "cat cliente", "categoria", "ct")
         )
         has_brand_item = any(
             key in row_values for key in ("marca / articolo", "marca/articolo", "articolo")
@@ -136,8 +142,15 @@ def load_sales_excel(file: Any) -> pd.DataFrame:
             "Formato file non supportato: esporta il file vendite come .xlsx e riprova."
         )
 
-    raw_df = pd.read_excel(file, header=None)
-    header_row = _detect_header_row(raw_df)
+    if hasattr(file, "seek"):
+        file.seek(0)
+
+    preview = pd.read_excel(file, header=None, nrows=30)
+    header_row = _detect_header_row(preview, scan_limit=30)
+
+    if hasattr(file, "seek"):
+        file.seek(0)
+
     df = pd.read_excel(file, header=header_row)
 
     df.columns = [_normalize_column_name(col) for col in df.columns]
